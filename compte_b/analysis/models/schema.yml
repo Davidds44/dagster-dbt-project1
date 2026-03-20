@@ -1,0 +1,5 @@
+version: 2
+
+models:
+  - name: example
+    description: Sanity-check model; replace with real staging/marts as you build out the project.

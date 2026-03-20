@@ -1,0 +1,10 @@
+# Use: DBT_PROFILES_DIR=analysis (from compte_b/) or pass --profiles-dir when running dbt.
+analysis:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # Resolved relative to the working directory; run dbt from `compte_b/` (see analysis/README.md).
+      path: "data/analysis.duckdb"
+      schema: main
+      threads: 4
