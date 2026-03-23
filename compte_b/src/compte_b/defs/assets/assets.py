@@ -6,6 +6,50 @@ from pathlib import Path
 
 import dagster as dg
 
+@dg.asset(
+    name="classed_data",
+    required_resource_keys={"database"}
+)
+def classed_data(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
+    downloads_dir = Path("/Users/daviddasilva/Projets/GitRepo")
+    csv_filename = "Compte 2026 - Tableau 2.csv"
+    csv_path = downloads_dir / csv_filename
+
+    # If the exact filename is not present, attempt a small fallback match.
+    if not csv_path.exists():
+        candidates = sorted(downloads_dir.glob("*Compte*2026*Tableau 2*.csv"))
+        if not candidates:
+            candidates = sorted(downloads_dir.glob("*Tableau 2*.csv"))
+        if not candidates:
+            raise FileNotFoundError(f"CSV file not found: {csv_path}")
+        csv_path = candidates[0]
+
+    with context.resources.database.get_connection() as con:
+        # Import directly from CSV into DuckDB.
+        # read_csv_auto will infer the delimiter and column types.
+        con.execute(
+            '''
+            CREATE OR REPLACE TABLE "classed-data" AS
+            SELECT
+                column00 AS "Type",
+                column01 AS "Date",
+                column02 AS "Libellé",
+                column03 AS "Montants (EUROS)",
+                column04 AS "Cumul/Mois En Euros",
+                column05 AS "Total en Euros"
+            FROM read_csv_auto(?, delim=';', header=false, skip=1)
+            WHERE column00 IS NOT NULL
+            ''',
+            [str(csv_path)],
+        )
+        imported_rows = con.execute('SELECT COUNT(*) FROM "classed-data"').fetchone()[0]
+
+    return dg.MaterializeResult(
+        metadata={
+            "csv_path": dg.MetadataValue.path(str(csv_path)),
+            "imported_rows": dg.MetadataValue.int(imported_rows),
+        }
+    )
 
 @dg.asset(
     name="raw-csv-import",
@@ -136,25 +180,27 @@ def raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
             '''
         )
 
-
-        last_date_import_row = con.execute('SELECT max("date-import") FROM "raw-data"').fetchone()
-        last_date_import: Date | None = last_date_import_row[0]  # type: ignore[assignment]
-
-        threshold_date = (
-            (last_date_import - timedelta(days=2)) if last_date_import is not None else Date(1900, 1, 1)
-        )
-
-        deleted_count = con.execute(
-            'SELECT COUNT(*) FROM "raw-data" WHERE "date" >= ?',
-            [threshold_date],
-        ).fetchone()[0]
-        con.execute('DELETE FROM "raw-data" WHERE "date" >= ?', [threshold_date])
-
-        total_inserted = 0
-        per_file_inserted: dict[str, int] = {}
-
         # Step 6: insert only after anti-dup deletion.
         for filename in copied_files:
+
+            ## Anti-duplication ##
+            last_date_import_row = con.execute('SELECT max("date-import") FROM "raw-data"').fetchone()
+            last_date_import: Date | None = last_date_import_row[0]  # type: ignore[assignment]
+
+            threshold_date = (
+                (last_date_import - timedelta(days=2)) if last_date_import is not None else Date(1900, 1, 1)
+            )
+
+            deleted_count = con.execute(
+                'SELECT COUNT(*) FROM "raw-data" WHERE "date" >= ?',
+                [threshold_date],
+            ).fetchone()[0]
+            con.execute('DELETE FROM "raw-data" WHERE "date" >= ?', [threshold_date])
+
+            total_inserted = 0
+            per_file_inserted: dict[str, int] = {}
+            ## Anti-duplication ##
+
             csv_path = destination_dir / filename
             date_import, total_amount_import, transactions = parse_metadata_and_transactions(csv_path)
 
@@ -163,6 +209,8 @@ def raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
                 for (tx_date, libelle, amount_euros) in transactions
                 if tx_date >= threshold_date
             ]
+            
+            rows_to_insert.sort(key=lambda r: r[0])  # r[0] = tx_date
 
             if not rows_to_insert:
                 per_file_inserted[filename] = 0
