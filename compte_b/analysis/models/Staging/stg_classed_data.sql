@@ -1,0 +1,1 @@
+select * from {{ source('compte_b', 'classed_data') }}

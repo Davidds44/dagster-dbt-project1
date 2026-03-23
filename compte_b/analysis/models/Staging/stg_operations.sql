@@ -1,0 +1,1 @@
+SELECT * FROM {{ source('compte_b', 'raw_csv_import') }}

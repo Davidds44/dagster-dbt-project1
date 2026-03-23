@@ -9,7 +9,7 @@ from compte_b.defs.project import dbt_project
 
 
 DB_ENV_VAR = "UNIVERSITY_DUCKDB_PATH"
-DEFAULT_DB_PATH = Path(__file__).resolve().parents[3] / "data" / "analysis.duckdb"
+DEFAULT_DB_PATH = Path(__file__).resolve().parents[3] / "data" / "compte_b.duckdb"
 
 
 def _get_db_path() -> str:

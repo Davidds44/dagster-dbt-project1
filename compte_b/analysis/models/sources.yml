@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: compte_b
+    description: Source tables for the compte_b project.
+    schema: main
+    tables:
+      - name: classed_data
+        identifier: classed-data
+        description: Data from the classed_data asset with classification of each line
+      - name: raw_csv_import
+        identifier: raw-data
+        description: Data from imported CSV files

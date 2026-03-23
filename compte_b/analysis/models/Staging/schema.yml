@@ -1,0 +1,8 @@
+version: 2
+
+models:
+  - name: stg_classed_data
+    description: Data from the classed_data asset / with classification of each lines
+
+  - name: stg_operations
+    description: Data from the import csv files 
