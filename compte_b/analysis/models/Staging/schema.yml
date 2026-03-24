@@ -3,6 +3,20 @@ version: 2
 models:
   - name: stg_classed_data
     description: Data from the classed_data asset / with classification of each lines
+    columns:
+      - name: "type"
+        description: "Type of operation"
+        tests:
+          - not_null
+      - name: "libelle_clean"
+        description: "Libellé of the operation"
+        tests:
+          - not_null
 
   - name: stg_operations
-    description: Data from the import csv files 
+    description: Data from the import csv files
+    columns:
+      - name: "date"
+        description: "Date of the operation"
+        tests:
+          - not_null

@@ -9,6 +9,7 @@ dependencies = [
     "dbt-core>=1.11.7",
     "dbt-duckdb>=1.10.1",
     "duckdb>=1.5.0",
+    "mlflow>=3.10.1",
     "openpyxl>=3.1.5",
 ]
 
@@ -16,6 +17,8 @@ dependencies = [
 dev = [
     "dagster-webserver",
     "dagster-dg-cli",
+    "jupyter>=1.1.1",
+    "nltk>=3.9.4",
 ]
 
 [build-system]

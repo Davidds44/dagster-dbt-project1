@@ -7,42 +7,61 @@ from pathlib import Path
 import dagster as dg
 
 @dg.asset(
-    name="compte_classed_data",
+    name="classed_data",
     required_resource_keys={"database"}
 )
-def compte_classed_data(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
+def classed_data(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
     downloads_dir = Path("/Users/daviddasilva/Projets/GitRepo")
-    csv_filename = "Compte 2026 - Tableau 2.csv"
-    csv_path = downloads_dir / csv_filename
+    csv_filenames = ["Compte 2026 - Tableau 2.csv", "Compte 2025 - Tableau 2.csv"]
+    imported_rows = 0
 
-    # If the exact filename is not present, attempt a small fallback match.
-    if not csv_path.exists():
-        candidates = sorted(downloads_dir.glob("*Compte*2026*Tableau 2*.csv"))
-        if not candidates:
-            candidates = sorted(downloads_dir.glob("*Tableau 2*.csv"))
-        if not candidates:
-            raise FileNotFoundError(f"CSV file not found: {csv_path}")
-        csv_path = candidates[0]
+    for csv_filename in csv_filenames:
+        csv_path = downloads_dir / csv_filename
 
-    with context.resources.database.get_connection() as con:
-        # Import directly from CSV into DuckDB.
-        # read_csv_auto will infer the delimiter and column types.
-        con.execute(
-            '''
-            CREATE OR REPLACE TABLE "compte_classed_data" AS
-            SELECT
-                column00 AS "Type",
-                column01 AS "Date",
-                column02 AS "Libellé",
-                column03 AS "Montants (EUROS)",
-                column04 AS "Cumul/Mois En Euros",
-                column05 AS "Total en Euros"
-            FROM read_csv_auto(?, delim=';', header=false, skip=1)
-            WHERE column00 IS NOT NULL
-            ''',
-            [str(csv_path)],
-        )
-        imported_rows = con.execute('SELECT COUNT(*) FROM "compte_classed_data"').fetchone()[0]
+        # If the exact filename is not present, attempt a small fallback match.
+        if not csv_path.exists():
+            base_pattern = csv_filename.replace(" - Tableau 2.csv", "")
+            candidates = sorted(downloads_dir.glob(f"*{base_pattern}*Tableau 2*.csv"))
+            if not candidates:
+                candidates = sorted(downloads_dir.glob("*Tableau 2*.csv"))
+            if not candidates:
+                raise FileNotFoundError(f"CSV file not found: {csv_path}")
+            csv_path = candidates[0]
+
+        with context.resources.database.get_connection() as con:
+            # Import directly from CSV into DuckDB.
+            # read_csv_auto will infer the delimiter and column types.
+
+            con.execute(
+                '''
+                CREATE TABLE IF NOT EXISTS "classed_data" (
+                    "Type" VARCHAR,
+                    "Date" VARCHAR,
+                    "Libellé" VARCHAR,
+                    "Montants (EUROS)" DOUBLE,
+                    "Cumul/Mois En Euros" DOUBLE,
+                    "Total en Euros" DOUBLE
+                )
+                '''
+            )
+            before_count = con.execute('SELECT COUNT(*) FROM "classed_data"').fetchone()[0]
+            con.execute(
+                '''
+                INSERT INTO "classed_data"
+                SELECT
+                    column00 AS "Type",
+                    column01 AS "Date",
+                    column02 AS "Libellé",
+                    TRY_CAST(REPLACE(column03, ',', '.') AS DOUBLE) AS "Montants (EUROS)",
+                    TRY_CAST(REPLACE(column04, ',', '.') AS DOUBLE) AS "Cumul/Mois En Euros",
+                    TRY_CAST(REPLACE(column05, ',', '.') AS DOUBLE) AS "Total en Euros"
+                FROM read_csv_auto(?, delim=';', header=false, skip=1)
+                WHERE column00 IS NOT NULL
+                ''',
+                [str(csv_path)],
+            )
+            after_count = con.execute('SELECT COUNT(*) FROM "classed_data"').fetchone()[0]
+            imported_rows += after_count - before_count
 
     return dg.MaterializeResult(
         metadata={
@@ -52,10 +71,10 @@ def compte_classed_data(context: dg.AssetExecutionContext) -> dg.MaterializeResu
     )
 
 @dg.asset(
-    name="compte_raw_csv_import",
+    name="raw_csv_import",
     required_resource_keys={"database"}
 )
-def compte_raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
+def raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
     """
     Copy raw CSV files from Downloads into `data/raw/`.
 
@@ -170,7 +189,7 @@ def compte_raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeRe
         # Column order: ensure "date" is the first column, as requested.
         con.execute(
             '''
-            CREATE TABLE IF NOT EXISTS "compte_raw_csv_import" (
+            CREATE TABLE IF NOT EXISTS "raw_csv_import" (
                 "date" DATE,
                 "libelle" VARCHAR,
                 "montant_euros" DOUBLE,
@@ -184,7 +203,7 @@ def compte_raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeRe
         for filename in copied_files:
 
             ## Anti-duplication ##
-            last_date_import_row = con.execute('SELECT max("date-import") FROM "compte_raw_csv_import"').fetchone()
+            last_date_import_row = con.execute('SELECT max("date-import") FROM "raw_csv_import"').fetchone()
             last_date_import: Date | None = last_date_import_row[0]  # type: ignore[assignment]
 
             threshold_date = (
@@ -192,7 +211,7 @@ def compte_raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeRe
             )
 
             deleted_count = con.execute(
-                'SELECT COUNT(*) FROM "compte_raw_csv_import" WHERE "date" >= ?',
+                'SELECT COUNT(*) FROM "raw_csv_import" WHERE "date" >= ?',
                 [threshold_date],
             ).fetchone()[0]
             con.execute('DELETE FROM "raw_csv_import" WHERE "date" >= ?', [threshold_date])
@@ -218,7 +237,7 @@ def compte_raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeRe
 
             con.executemany(
                 '''
-                INSERT INTO "compte_raw_csv_import"
+                INSERT INTO "raw_csv_import"
                     ("date", "libelle", "montant_euros", "date-import", "total amount-import")
                 VALUES (?, ?, ?, ?, ?)
                 ''',
@@ -229,7 +248,7 @@ def compte_raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeRe
             total_inserted += inserted
 
         context.log.info(
-            f'DuckDB load into "compte_raw_csv_import": threshold={threshold_date}, deleted={deleted_count}, inserted={total_inserted}'
+            f'DuckDB load into "raw_csv_import": threshold={threshold_date}, deleted={deleted_count}, inserted={total_inserted}'
         )
 
     return dg.MaterializeResult(
@@ -238,9 +257,9 @@ def compte_raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeRe
             "destination_dir": dg.MetadataValue.path(str(destination_dir)),
             "copied_files": dg.MetadataValue.json(copied_files),
             "duckdb_path": dg.MetadataValue.path(str(db_path)),
-            "compte_raw_csv_import_threshold_date": dg.MetadataValue.text(str(threshold_date)),
-            "compte_raw_csv_import_total_inserted": dg.MetadataValue.int(total_inserted),
-            "compte_raw_csv_import_per_file_inserted": dg.MetadataValue.json(per_file_inserted),
+            "raw_csv_import_threshold_date": dg.MetadataValue.text(str(threshold_date)),
+            "raw_csv_import_total_inserted": dg.MetadataValue.int(total_inserted),
+            "raw_csv_import_per_file_inserted": dg.MetadataValue.json(per_file_inserted),
         }
     )
 
