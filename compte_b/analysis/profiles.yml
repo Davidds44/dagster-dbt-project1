@@ -1,10 +1,10 @@
-# Use: DBT_PROFILES_DIR=analysis (from compte_b/) or pass --profiles-dir when running dbt.
+# DuckDB file path: use COMPTE_B_DUCKDB_PATH (set by compte_b.defs.project when Dagster loads) or export
+# it yourself, e.g. `export COMPTE_B_DUCKDB_PATH="$PWD/data/compte_b.duckdb"` from `compte_b/`.
 analysis:
   target: dev
   outputs:
     dev:
       type: duckdb
-      # Resolved relative to the working directory; run dbt from `compte_b/` (see analysis/README.md).
-      path: "data/compte_b.duckdb"
+      path: "{{ env_var('COMPTE_B_DUCKDB_PATH') }}"
       schema: main
       threads: 4

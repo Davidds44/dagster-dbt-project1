@@ -8,7 +8,7 @@ from dagster_dbt import DbtCliResource
 from compte_b.defs.project import dbt_project
 
 
-DB_ENV_VAR = "UNIVERSITY_DUCKDB_PATH"
+DB_ENV_VAR = "COMPTE_B_DUCKDB_PATH"
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[3] / "data" / "compte_b.duckdb"
 
 
