@@ -19,6 +19,7 @@ dev = [
     "dagster-dg-cli",
     "jupyter>=1.1.1",
     "nltk>=3.9.4",
+    "ipykernel>=7.2.0",
 ]
 
 [build-system]

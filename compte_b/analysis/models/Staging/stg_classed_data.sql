@@ -6,11 +6,23 @@ with raw_classed_data as (
 SELECT  
     "Type",
     TRIM(
-
         REGEXP_REPLACE(
-            REGEXP_REPLACE("Libellé", ' CB ', ' '),
-            '\s[0-9]{2}\.[0-9]{2}\.[0-9]{2}.*',
-            ''
+            REGEXP_REPLACE(
+                REGEXP_REPLACE(
+                    REGEXP_REPLACE(
+                        REGEXP_REPLACE("Libellé", ' CB ', ' '),
+                        '\s[0-9]{2}H[0-9]{2}',
+                        ' '
+                    ),
+                    '\s[0-9]{2}\.[0-9]{2}\.[0-9]{2}.',
+                    ' '
+                ),
+                '\s[0-9]{2}/[0-9]{2}/[0-9]{2}.',
+                ' '
+            ),
+            '[0-9]+',
+            '',
+            'g'
         )
     ) AS libelle_clean,
     "Montants (EUROS)" AS "Montant"

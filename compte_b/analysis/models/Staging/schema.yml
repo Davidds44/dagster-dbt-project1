@@ -20,3 +20,11 @@ models:
         description: "Date of the operation"
         tests:
           - not_null
+      - name: "libelle"
+        description: "Libellé of the operation"
+        tests:
+          - not_null
+      - name: "montant_euros"
+        description: "Montant of the operation in euros"
+        tests:
+          - not_null

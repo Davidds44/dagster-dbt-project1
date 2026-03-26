@@ -8,12 +8,28 @@ import dagster as dg
 
 @dg.asset(
     name="classed_data",
-    required_resource_keys={"database"}
+    required_resource_keys={"database"},
+    group_name="raw_data"
 )
 def classed_data(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
     downloads_dir = Path("/Users/daviddasilva/Projets/GitRepo")
-    csv_filenames = ["Compte 2026 - Tableau 2.csv", "Compte 2025 - Tableau 2.csv"]
+    csv_filenames = [
+        "Compte 2026 - Tableau 2.csv",
+        "Compte 2025 - Tableau 2.csv", 
+        "Compte 2024 - Tableau 2.csv", 
+        # "Compte 2023 - Tableau 2.csv" 
+        # "Compte 2022 - Tableau 2.csv", 
+        # "Compte 2021 - Tableau 2.csv", 
+        # "Compte 2020 - Tableau 2.csv"
+    ]
     imported_rows = 0
+
+    with context.resources.database.get_connection() as con:
+        con.execute(
+            '''
+            DROP TABLE IF EXISTS "classed_data"
+            '''
+        )
 
     for csv_filename in csv_filenames:
         csv_path = downloads_dir / csv_filename
@@ -72,7 +88,8 @@ def classed_data(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
 
 @dg.asset(
     name="raw_csv_import",
-    required_resource_keys={"database"}
+    required_resource_keys={"database"},
+    group_name="raw_data"
 )
 def raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
     """
@@ -251,15 +268,35 @@ def raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
             f'DuckDB load into "raw_csv_import": threshold={threshold_date}, deleted={deleted_count}, inserted={total_inserted}'
         )
 
+
+    # Cleanup: supprimer les fichiers sources uniquement après chargement réussi.
+    # On supprime uniquement ceux qui ont été copiés au préalable.
+    deleted_files: list[str] = []
+    delete_failed: dict[str, str] = {}
+    for filename in copied_files:
+        src_path = downloads_dir / filename
+        try:
+            if src_path.exists():
+                src_path.unlink()
+                deleted_files.append(filename)
+        except Exception as exc:  # pragma: no cover
+            delete_failed[filename] = str(exc)
+            context.log.warning(f"Could not delete source CSV {src_path}: {exc}")
+
+    context.log.info(
+        f"Deleted {len(deleted_files)}/{len(copied_files)} source CSV file(s) from {downloads_dir}"
+    )
+
     return dg.MaterializeResult(
         metadata={
             "copied_count": dg.MetadataValue.int(len(copied_files)),
             "destination_dir": dg.MetadataValue.path(str(destination_dir)),
             "copied_files": dg.MetadataValue.json(copied_files),
+            "deleted_source_files_count": dg.MetadataValue.int(len(deleted_files)),
+            "deleted_source_files_failed": dg.MetadataValue.json(delete_failed),
             "duckdb_path": dg.MetadataValue.path(str(db_path)),
             "raw_csv_import_threshold_date": dg.MetadataValue.text(str(threshold_date)),
             "raw_csv_import_total_inserted": dg.MetadataValue.int(total_inserted),
             "raw_csv_import_per_file_inserted": dg.MetadataValue.json(per_file_inserted),
         }
     )
-
