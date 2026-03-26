@@ -1,7 +1,6 @@
 import dagster as dg
 import pandas as pd
 import re
-import joblib
 from pathlib import Path
 import numpy as np
 from sklearn.compose import ColumnTransformer
@@ -10,9 +9,11 @@ from sklearn.model_selection import RandomizedSearchCV, train_test_split
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.svm import LinearSVC
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report
 from nltk.corpus import stopwords
+import mlflow
+import mlflow.sklearn
+from mlflow.tracking import MlflowClient
 
 def clean_text(t: object) -> str:
     """
@@ -119,6 +120,7 @@ def _repo_root() -> Path:
     if root is None:
         raise RuntimeError("Could not locate repo root (missing compte_b/pyproject.toml)")
     return root
+
 
 
 @dg.asset(
@@ -229,20 +231,38 @@ def ML_model(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
     accuracy = float(accuracy_score(y_test, y_pred))
     report = classification_report(y_test, y_pred)
 
-    # 8) Sauvegarde du modèle entraîné
+    # 8) Sauvegarde du modèle entraîné via MLflow
     model_dir = _repo_root() / "compte_b" / "data" / "models"
     model_dir.mkdir(parents=True, exist_ok=True)
-    model_path = model_dir / "ml_model.joblib"
-    joblib.dump(best_model, model_path)
+    mlflow_db_path = model_dir / "mlflow.db"
+    artifacts_dir = model_dir / "mlartifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    tracking_uri = f"sqlite:///{mlflow_db_path.as_posix()}"
+    mlflow.set_tracking_uri(tracking_uri)
+    artifact_uri = artifacts_dir.as_uri()
+    client = MlflowClient(tracking_uri=tracking_uri)
+    experiment_name = "ML_model"
+    experiment = client.get_experiment_by_name(experiment_name)
+    if experiment is None:
+        client.create_experiment(experiment_name, artifact_location=artifact_uri)
+    elif experiment.artifact_location != artifact_uri:
+        # Existing experiment may still point to legacy "mlruns" artifacts.
+        experiment_name = "ML_model_mlartifacts"
+        alt_experiment = client.get_experiment_by_name(experiment_name)
+        if alt_experiment is None:
+            client.create_experiment(experiment_name, artifact_location=artifact_uri)
+    mlflow.set_experiment(experiment_name)
+    model_uri_file = model_dir / "latest_model_uri.txt"
+    model_uri = ""
 
-    # 9) (optionnel) MLflow
-    # On évite de casser le pipeline si mlflow n'est pas configuré.
     try:
-        with mlflow.start_run(run_name="ML_model"):
+        with mlflow.start_run(run_name="ML_model") as run:
             mlflow.log_metric("accuracy", accuracy)
             mlflow.log_params(search.best_params_)
             mlflow.log_text(report, "classification_report.txt")
-            mlflow.log_artifact(str(model_path))
+            mlflow.sklearn.log_model(sk_model=best_model, artifact_path="model")
+            model_uri = f"runs:/{run.info.run_id}/model"
+            model_uri_file.write_text(model_uri, encoding="utf-8")
     except Exception as exc:  # pragma: no cover
         context.log.warning(f"MLflow logging skipped: {exc}")
 
@@ -252,6 +272,10 @@ def ML_model(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
             "accuracy": dg.MetadataValue.float(accuracy),
             "best_params": dg.MetadataValue.json(search.best_params_),
             "classification_report": dg.MetadataValue.text(report),
-            "model_path": dg.MetadataValue.path(str(model_path)),
+            "model_uri": dg.MetadataValue.text(model_uri),
+            "tracking_uri": dg.MetadataValue.text(tracking_uri),
+            "artifacts_uri": dg.MetadataValue.path(str(artifacts_dir)),
+            "experiment_name": dg.MetadataValue.text(experiment_name),
+            "model_uri_file": dg.MetadataValue.path(str(model_uri_file)),
         }
     )

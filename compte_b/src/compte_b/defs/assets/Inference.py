@@ -2,8 +2,8 @@ import re
 from pathlib import Path
 
 import dagster as dg
-import joblib
-import numpy as np
+import mlflow
+import mlflow.sklearn
 import pandas as pd
 
 
@@ -99,12 +99,20 @@ def _pick_column(df: pd.DataFrame, candidates: list[str]) -> str:
     group_name="ML_model",
 )
 def stg_operations_with_type(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
-    # 1) Charger le modèle entraîné
-    model_path = _repo_root() / "compte_b" / "data" / "models" / "ml_model.joblib"
-    if not model_path.exists():
-        raise FileNotFoundError(f"Missing trained model: {model_path}")
+    # 1) Charger le modèle entraîné depuis MLflow
+    model_dir = _repo_root() / "compte_b" / "data" / "models"
+    mlflow_db_path = model_dir / "mlflow.db"
+    tracking_uri = f"sqlite:///{mlflow_db_path.as_posix()}"
+    model_uri_file = model_dir / "latest_model_uri.txt"
+    if not model_uri_file.exists():
+        raise FileNotFoundError(f"Missing MLflow model URI file: {model_uri_file}")
 
-    model = joblib.load(str(model_path))
+    model_uri = model_uri_file.read_text(encoding="utf-8").strip()
+    if not model_uri:
+        raise RuntimeError(f"Empty MLflow model URI in: {model_uri_file}")
+
+    mlflow.set_tracking_uri(tracking_uri)
+    model = mlflow.sklearn.load_model(model_uri=model_uri)
 
     # 2) Charger les opérations (features brutes)
     with context.resources.database.get_connection() as con:
@@ -169,7 +177,8 @@ def stg_operations_with_type(context: dg.AssetExecutionContext) -> dg.Materializ
     return dg.MaterializeResult(
         metadata={
             "rows": dg.MetadataValue.int(len(out_df)),
-            "model_path": dg.MetadataValue.path(str(model_path)),
+            "model_uri": dg.MetadataValue.text(model_uri),
+            "tracking_uri": dg.MetadataValue.text(tracking_uri),
             "output_table": dg.MetadataValue.text("stg_operations_with_type"),
         }
     )

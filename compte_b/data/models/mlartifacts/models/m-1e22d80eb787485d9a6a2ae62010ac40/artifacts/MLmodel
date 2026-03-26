@@ -1,0 +1,23 @@
+artifact_path: file:///Users/daviddasilva/Projets/GitRepo/dagster-dbt-project1/compte_b/data/models/mlartifacts/models/m-1e22d80eb787485d9a6a2ae62010ac40/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.13.12
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.8.0
+    skops_trusted_types: null
+mlflow_version: 3.10.1
+model_id: m-1e22d80eb787485d9a6a2ae62010ac40
+model_size_bytes: 166129
+model_uuid: m-1e22d80eb787485d9a6a2ae62010ac40
+prompts: null
+run_id: b5ffb3eb36684cea81e6139dd8d08f73
+utc_time_created: '2026-03-26 15:21:40.465121'
