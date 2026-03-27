@@ -1,4 +1,4 @@
-artifact_path: file:///Users/daviddasilva/Projets/GitRepo/dagster-dbt-project1/compte_b/data/models/mlartifacts/models/m-1e22d80eb787485d9a6a2ae62010ac40/artifacts
+artifact_path: file:///Users/daviddasilva/Projets/GitRepo/dagster-dbt-project1/compte_b/data/models/mlartifacts/models/m-1725a52bf6774a358fa1276f2cc8ddf7/artifacts
 flavors:
   python_function:
     env:
@@ -15,9 +15,9 @@ flavors:
     sklearn_version: 1.8.0
     skops_trusted_types: null
 mlflow_version: 3.10.1
-model_id: m-1e22d80eb787485d9a6a2ae62010ac40
-model_size_bytes: 166129
-model_uuid: m-1e22d80eb787485d9a6a2ae62010ac40
+model_id: m-1725a52bf6774a358fa1276f2cc8ddf7
+model_size_bytes: 75086
+model_uuid: m-1725a52bf6774a358fa1276f2cc8ddf7
 prompts: null
-run_id: b5ffb3eb36684cea81e6139dd8d08f73
-utc_time_created: '2026-03-26 15:21:40.465121'
+run_id: a4b539b8b0f84ce2ab7f92d1c8337a69
+utc_time_created: '2026-03-27 11:33:03.665336'

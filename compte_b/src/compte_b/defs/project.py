@@ -10,6 +10,9 @@ _PROJECT_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_DUCKDB = _PROJECT_ROOT / "data" / "compte_b.duckdb"
 os.environ.setdefault("COMPTE_B_DUCKDB_PATH", str(_DEFAULT_DUCKDB))
 
+_DEFAULT_SQLITE = _PROJECT_ROOT / "data" / "partage.sqlite"
+os.environ.setdefault("COMPTE_B_SQLITE_PATH", str(_DEFAULT_SQLITE))
+
 dbt_project = DbtProject(
     project_dir=Path(__file__).joinpath("../../../..", "analysis").resolve()
 )

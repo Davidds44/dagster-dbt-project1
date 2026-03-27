@@ -1,0 +1,16 @@
+              precision    recall  f1-score   support
+
+     Anormal       1.00      0.33      0.50         3
+        Cash       0.86      1.00      0.92         6
+    Depenses       1.00      0.96      0.98        52
+   Economies       0.88      1.00      0.93         7
+    FraisPro       1.00      0.83      0.90        46
+  Immobilier       1.00      0.92      0.96        13
+        Life       0.81      0.77      0.79        86
+      Normal       0.89      0.97      0.93       193
+    Salaires       1.00      1.00      1.00         4
+     Voiture       1.00      0.33      0.50         3
+
+    accuracy                           0.90       413
+   macro avg       0.94      0.81      0.84       413
+weighted avg       0.90      0.90      0.90       413

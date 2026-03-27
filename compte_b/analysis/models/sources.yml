@@ -9,3 +9,11 @@ sources:
         description: Data from the classed_data asset with classification of each line
       - name: raw_csv_import
         description: Data from imported CSV files
+  - name: sqlite
+    description: External SQLite sources used in staging models.
+    schema: main
+    tables:
+      - name: stg_operations_with_type
+        description: Operations enriched with type from the SQLite database.
+        config:
+          external_location: "sqlite_scan('{{ env_var(\"COMPTE_B_SQLITE_PATH\", \"data/partage.sqlite\") }}', 'stg_operations_with_type')"

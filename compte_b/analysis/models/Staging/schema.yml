@@ -4,12 +4,20 @@ models:
   - name: stg_classed_data
     description: Data from the classed_data asset / with classification of each lines
     columns:
-      - name: "type"
+      - name: "Type"
         description: "Type of operation"
         tests:
           - not_null
-      - name: "libelle_clean"
+      - name: "Date"
+        description: "Date of the operation"
+        tests:
+          - not_null
+      - name: "Libellé"
         description: "Libellé of the operation"
+        tests:
+          - not_null
+      - name: "Montant"
+        description: "Montant of the operation in euros"
         tests:
           - not_null
 

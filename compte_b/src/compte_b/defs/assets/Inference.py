@@ -49,13 +49,19 @@ def clean_text(t: object) -> str:
     """
     Nettoyage minimal inspiré du notebook.
 
-    Doit rester cohérent avec `clean_text` utilisé lors de l'entraînement.
+    Doit rester cohérent avec `clean_text` utilisé lors de l'entraînement
+    et avec la colonne `"Libellé"` de `stg_classed_data`.
     """
 
     s = "" if t is None else str(t)
     s = s.lower()
-    s = re.sub(r"\d+", "", s)  # supprimer chiffres
-    s = re.sub(r"carte numero", "", s)
+    # Aligné sur `stg_classed_data.sql` (REGEXP_REPLACE sur la colonne "Libellé")
+    s = re.sub(r"\s\d{2}h\d{2}", " ", s)
+    s = re.sub(r"\s\d{2}\.\d{2}\.\d{2}.", " ", s)
+    s = re.sub(r"\s\d{2}/\d{2}/\d{2}.", " ", s)
+
+    # Suppression de tous les chiffres (équivalent à `[0-9]+`, flags globaux)
+    s = re.sub(r"[0-9]+", "", s)
     s = re.sub(r"\s+", " ", s)
     return s.strip()
 
