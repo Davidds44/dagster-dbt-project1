@@ -8,6 +8,7 @@ import dagster as dg
 from dagster_duckdb import DuckDBResource
 from dagster_dbt import DbtCliResource
 from compte_b.defs.project import dbt_project
+from compte_b.defs.sqlite_bootstrap import ensure_partage_sqlite_stub
 
 
 DB_ENV_VAR = "COMPTE_B_DUCKDB_PATH"

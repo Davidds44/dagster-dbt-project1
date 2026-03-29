@@ -59,3 +59,17 @@ To learn more about this template and Dagster in general:
 - [Dagster Documentation](https://docs.dagster.io/)
 - [Dagster University](https://courses.dagster.io/)
 - [Dagster Slack Community](https://dagster.io/slack)
+
+## accesing the sqlite data
+
+uv run streamlit run streamlit/app.py
+
+## launching the dbt commandes
+
+export COMPTE_B_DUCKDB_PATH="$PWD/data/compte_b.duckdb"
+uv run dbt parse --project-dir analysis --profiles-dir analysis
+uv run dbt build --project-dir analysis --profiles-dir analysis
+
+## looking at the duckdb data
+
+uv run duckdb -ui

@@ -37,7 +37,7 @@ def partage_sqlite(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
     if not sqlite_path.is_absolute():
         sqlite_path = (_repo_root() / "compte_b" / sqlite_path).resolve()
 
-    table_name = "stg_operations_with_type"
+    table_name = "partage_sqlite_table"
 
     with context.resources.sqlite.get_connection() as sqlite_con:
         df.to_sql(table_name, sqlite_con, if_exists="replace", index=False)

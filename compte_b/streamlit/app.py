@@ -31,7 +31,7 @@ def resolve_sqlite_path() -> Path:
 def load_data(db_path: str, limit: int) -> pd.DataFrame:
     query = (
         "SELECT rowid AS _rowid, * "
-        "FROM stg_operations_with_type "
+        "FROM partage_sqlite_table "
         "ORDER BY date DESC, rowid DESC "
         f"LIMIT {int(limit)}"
     )
@@ -40,7 +40,7 @@ def load_data(db_path: str, limit: int) -> pd.DataFrame:
 
 
 st.set_page_config(page_title="Partage SQLite Viewer", layout="wide")
-st.title("Partage SQLite - stg_operations_with_type")
+st.title("Partage SQLite - partage_sqlite_table")
 
 sqlite_path = resolve_sqlite_path()
 st.caption(f"SQLite file: {sqlite_path}")

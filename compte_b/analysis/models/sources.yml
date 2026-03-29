@@ -13,7 +13,7 @@ sources:
     description: External SQLite sources used in staging models.
     schema: main
     tables:
-      - name: stg_operations_with_type
+      - name: partage_sqlite_table
         description: Operations enriched with type from the SQLite database.
         config:
-          external_location: "sqlite_scan('{{ env_var(\"COMPTE_B_SQLITE_PATH\", \"data/partage.sqlite\") }}', 'stg_operations_with_type')"
+          external_location: "sqlite_scan('{{ env_var(\"COMPTE_B_SQLITE_PATH\", \"data/partage.sqlite\") }}', 'partage_sqlite_table')"

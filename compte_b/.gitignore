@@ -8,6 +8,7 @@
 *.pkl
 *.sqlite
 *.DS_Store
+*data/models*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

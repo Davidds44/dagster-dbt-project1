@@ -2,7 +2,11 @@ version: 2
 
 models:
   - name: stg_classed_data
-    description: Data from the classed_data asset / with classification of each lines
+    description: >
+      Incremental table: on full refresh, loads all rows from source classed_data (excluding Bilan Mensuel)
+      plus eligible rows from SQLite partage (dates after max classed date, older than 3 days from today).
+      On incremental runs, only new partage rows are appended (watermark = max Date already in this table).
+      Re-run with --full-refresh on this model when classed_data must be re-hydrated from the source.
     columns:
       - name: "Type"
         description: "Type of operation"
