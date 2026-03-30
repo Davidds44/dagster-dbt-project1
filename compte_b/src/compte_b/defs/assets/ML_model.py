@@ -3,6 +3,7 @@ import pandas as pd
 import re
 from pathlib import Path
 import numpy as np
+from compte_b.env_paths import resolve_compte_b_project_root
 from sklearn.compose import ColumnTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import RandomizedSearchCV, train_test_split
@@ -10,7 +11,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer, StandardScaler
 from sklearn.svm import LinearSVC
 from sklearn.metrics import accuracy_score, classification_report
-from nltk.corpus import stopwords
+import nltk
+
 import mlflow
 import mlflow.sklearn
 from mlflow.tracking import MlflowClient
@@ -64,15 +66,26 @@ def _get_my_stop_words(context: dg.AssetExecutionContext) -> list[str]:
     extra_stop_words = [w.lower() if isinstance(w, str) else w for w in extra_stop_words]
 
     try:
-        my_stop_words = stopwords.words("french") + stopwords.words("portuguese") + extra_stop_words
+        # Import "stopwords" lazily to avoid triggering NLTK corpus loading at module import time.
+        from nltk.corpus import stopwords as nltk_stopwords
+
+        my_stop_words = (
+            nltk_stopwords.words("french")
+            + nltk_stopwords.words("portuguese")
+            + extra_stop_words
+        )
     except LookupError:
         # Dans certains environnements, le corpus NLTK "stopwords" peut ne pas être installé.
         try:
             import nltk
 
             nltk.download("stopwords", quiet=True)
+            from nltk.corpus import stopwords as nltk_stopwords
+
             my_stop_words = (
-                stopwords.words("french") + stopwords.words("portuguese") + extra_stop_words
+                nltk_stopwords.words("french")
+                + nltk_stopwords.words("portuguese")
+                + extra_stop_words
             )
         except Exception as exc:  # pragma: no cover
             context.log.warning(f"NLTK stopwords unavailable; falling back to custom list: {exc}")
@@ -109,24 +122,6 @@ def regex_features(X: object) -> pd.DataFrame:
             "dgfip": X.str.contains("dgfip", regex=False).astype(int),
         }
     )
-
-
-def _repo_root() -> Path:
-    """Repère la racine du repo via `compte_b/pyproject.toml`."""
-
-    this_file = Path(__file__).resolve()
-    root = next(
-        (
-            parent
-            for parent in this_file.parents
-            if (parent / "compte_b" / "pyproject.toml").exists()
-        ),
-        None,
-    )
-    if root is None:
-        raise RuntimeError("Could not locate repo root (missing compte_b/pyproject.toml)")
-    return root
-
 
 
 @dg.asset(
@@ -238,7 +233,8 @@ def ML_model(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
     report = classification_report(y_test, y_pred)
 
     # 8) Sauvegarde du modèle entraîné via MLflow
-    model_dir = _repo_root() / "compte_b" / "data" / "models"
+    project_root = resolve_compte_b_project_root(start=Path(__file__))
+    model_dir = project_root / "data" / "models"
     model_dir.mkdir(parents=True, exist_ok=True)
     mlflow_db_path = model_dir / "mlflow.db"
     artifacts_dir = model_dir / "mlartifacts"

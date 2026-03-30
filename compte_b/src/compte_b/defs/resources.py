@@ -1,3 +1,13 @@
+"""Resources and env-driven paths.
+
+Environment variables used across the project:
+
+- ``COMPTE_B_DUCKDB_PATH`` — DuckDB file for Dagster assets (default: ``data/compte_b.duckdb``).
+- ``COMPTE_B_SQLITE_PATH`` — SQLite file for ``partage`` (default: ``data/partage.sqlite``).
+- ``DOWNLOADS_DIR`` — Host folder for bank CSV imports (``raw_csv_import``); default: ``~/Downloads``.
+  In Docker, set to ``/downloads`` when mounting ``~/Downloads:/downloads``.
+- ``COMPTE_B_INPUT_DIR`` — Optional override for *Compte 20xx* CSVs (default: ``data/input``).
+"""
 
 import os
 import sqlite3

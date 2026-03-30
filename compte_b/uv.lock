@@ -582,6 +582,7 @@ dependencies = [
     { name = "dbt-duckdb" },
     { name = "duckdb" },
     { name = "mlflow" },
+    { name = "nltk" },
     { name = "openpyxl" },
     { name = "streamlit" },
 ]
@@ -591,6 +592,7 @@ dev = [
     { name = "dagster-dg-cli" },
     { name = "dagster-webserver" },
     { name = "datasette" },
+    { name = "docker" },
     { name = "ipykernel" },
     { name = "jupyter" },
     { name = "nltk" },
@@ -605,6 +607,7 @@ requires-dist = [
     { name = "dbt-duckdb", specifier = ">=1.10.1" },
     { name = "duckdb", specifier = ">=1.5.0" },
     { name = "mlflow", specifier = ">=3.10.1" },
+    { name = "nltk", specifier = ">=3.9.4" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "streamlit", specifier = ">=1.55.0" },
 ]
@@ -614,6 +617,7 @@ dev = [
     { name = "dagster-dg-cli" },
     { name = "dagster-webserver" },
     { name = "datasette", specifier = ">=0.65.2" },
+    { name = "docker", specifier = ">=7.1.0" },
     { name = "ipykernel", specifier = ">=7.2.0" },
     { name = "jupyter", specifier = ">=1.1.1" },
     { name = "nltk", specifier = ">=3.9.4" },

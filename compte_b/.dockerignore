@@ -1,0 +1,14 @@
+.venv
+.git
+**/__pycache__
+*.py[cod]
+*.duckdb
+*.sqlite
+*.parquet
+.dagster*
+.tmp*
+analysis/target
+analysis/dbt_packages
+.streamlit/secrets.toml
+.env
+.env.*

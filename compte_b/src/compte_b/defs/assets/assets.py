@@ -1,10 +1,17 @@
 import csv
 import io
+import os
 import shutil
 from datetime import date as Date, datetime, timedelta
 from pathlib import Path
 
 import dagster as dg
+
+from compte_b.env_paths import (
+    get_classed_input_dir,
+    get_downloads_dir,
+    resolve_compte_b_project_root,
+)
 
 @dg.asset(
     name="classed_data",
@@ -12,7 +19,8 @@ import dagster as dg
     group_name="raw_data"
 )
 def classed_data(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
-    downloads_dir = Path("/Users/daviddasilva/Projets/GitRepo")
+    project_root = resolve_compte_b_project_root(start=Path(__file__))
+    input_dir = get_classed_input_dir(project_root)
     csv_filenames = [
         "Compte 2026 - Tableau 2.csv",
         "Compte 2025 - Tableau 2.csv", 
@@ -32,14 +40,14 @@ def classed_data(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
         )
 
     for csv_filename in csv_filenames:
-        csv_path = downloads_dir / csv_filename
+        csv_path = input_dir / csv_filename
 
         # If the exact filename is not present, attempt a small fallback match.
         if not csv_path.exists():
             base_pattern = csv_filename.replace(" - Tableau 2.csv", "")
-            candidates = sorted(downloads_dir.glob(f"*{base_pattern}*Tableau 2*.csv"))
+            candidates = sorted(input_dir.glob(f"*{base_pattern}*Tableau 2*.csv"))
             if not candidates:
-                candidates = sorted(downloads_dir.glob("*Tableau 2*.csv"))
+                candidates = sorted(input_dir.glob("*Tableau 2*.csv"))
             if not candidates:
                 raise FileNotFoundError(f"CSV file not found: {csv_path}")
             csv_path = candidates[0]
@@ -81,6 +89,7 @@ def classed_data(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
 
     return dg.MaterializeResult(
         metadata={
+            "input_dir": dg.MetadataValue.path(str(input_dir)),
             "csv_path": dg.MetadataValue.path(str(csv_path)),
             "imported_rows": dg.MetadataValue.int(imported_rows),
         }
@@ -98,29 +107,44 @@ def raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
     Matches: `4340561S033*.csv`
     """
 
-    downloads_dir = Path("/Users/daviddasilva/Downloads")
+    downloads_dir = get_downloads_dir()
     filename_pattern = "4340561S033*.csv"
 
-    # Resolve repo root by locating `compte_b/pyproject.toml` in parent dirs.
-    this_file = Path(__file__).resolve()
-    repo_root = next(
-        (
-            parent
-            for parent in this_file.parents
-            if (parent / "compte_b" / "pyproject.toml").exists()
-        ),
-        None,
-    )
-    if repo_root is None:
-        raise RuntimeError("Could not locate repo root (missing compte_b/pyproject.toml)")
-    destination_dir = repo_root / "compte_b" / "data" / "raw"
+    project_root = resolve_compte_b_project_root(start=Path(__file__))
+    destination_dir = project_root / "data" / "raw"
 
     destination_dir.mkdir(parents=True, exist_ok=True)
 
     matches = sorted(downloads_dir.glob(filename_pattern))
     if not matches:
-        raise FileNotFoundError(
-            f"No files found in {downloads_dir} matching pattern {filename_pattern}"
+        # No input files: skip cleanly instead of failing the whole pipeline.
+        # This allows downstream assets/jobs (e.g. `Inference`) to avoid unnecessary execution.
+        with context.resources.database.get_connection() as con:
+            con.execute(
+                '''
+                CREATE TABLE IF NOT EXISTS "raw_csv_import" (
+                    "date" DATE,
+                    "libelle" VARCHAR,
+                    "montant_euros" DOUBLE,
+                    "date-import" DATE,
+                    "total amount-import" DOUBLE
+                )
+                '''
+            )
+
+        context.log.info(
+            f"No files found in {downloads_dir} matching pattern {filename_pattern}; skipping raw_csv_import."
+        )
+        return dg.MaterializeResult(
+            metadata={
+                "copied_count": dg.MetadataValue.int(0),
+                "destination_dir": dg.MetadataValue.path(str(destination_dir)),
+                "copied_files": dg.MetadataValue.json([]),
+                "deleted_source_files_count": dg.MetadataValue.int(0),
+                "deleted_source_files_failed": dg.MetadataValue.json({}),
+                "raw_csv_import_total_inserted": dg.MetadataValue.int(0),
+                "raw_csv_import_per_file_inserted": dg.MetadataValue.json({}),
+            }
         )
 
     copied_files: list[str] = []
@@ -198,7 +222,9 @@ def raw_csv_import(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
         return date_import, total_amount_import, transactions
 
 
-    db_path = repo_root / "compte_b" / "data" / "analysis.duckdb"
+    db_path = Path(
+        os.environ.get("COMPTE_B_DUCKDB_PATH", str(project_root / "data" / "compte_b.duckdb"))
+    )
     db_path.parent.mkdir(parents=True, exist_ok=True)
 
     with context.resources.database.get_connection() as con:

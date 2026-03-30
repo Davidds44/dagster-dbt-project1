@@ -5,6 +5,7 @@ import dagster as dg
 import mlflow
 import mlflow.sklearn
 import pandas as pd
+from compte_b.env_paths import resolve_compte_b_project_root
 
 
 @dg.asset(
@@ -19,7 +20,7 @@ def extract_inferenced_data(context: dg.AssetExecutionContext) -> dg.Materialize
         ops = con.execute("SELECT * FROM stg_operations_with_type").df()
 
     # 2) Export CSV dans data/export
-    export_dir = _repo_root() / "compte_b" / "data" / "export"
+    export_dir = _repo_root() / "data" / "export"
     export_dir.mkdir(parents=True, exist_ok=True)
     export_filename = f"extract_inferenced_data_{pd.Timestamp.now().strftime('%Y-%m-%d')}.csv"
     export_path = export_dir / export_filename
@@ -67,20 +68,8 @@ def clean_text(t: object) -> str:
 
 
 def _repo_root() -> Path:
-    """Repère la racine du repo via `compte_b/pyproject.toml`."""
-
-    this_file = Path(__file__).resolve()
-    root = next(
-        (
-            parent
-            for parent in this_file.parents
-            if (parent / "compte_b" / "pyproject.toml").exists()
-        ),
-        None,
-    )
-    if root is None:
-        raise RuntimeError("Could not locate repo root (missing compte_b/pyproject.toml)")
-    return root
+    """Racine du projet `compte_b` (contient `pyproject.toml` et `data/`)."""
+    return resolve_compte_b_project_root(start=Path(__file__))
 
 
 def _pick_column(df: pd.DataFrame, candidates: list[str]) -> str:
@@ -106,7 +95,7 @@ def _pick_column(df: pd.DataFrame, candidates: list[str]) -> str:
 )
 def stg_operations_with_type(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
     # 1) Charger le modèle entraîné depuis MLflow
-    model_dir = _repo_root() / "compte_b" / "data" / "models"
+    model_dir = _repo_root() / "data" / "models"
     mlflow_db_path = model_dir / "mlflow.db"
     tracking_uri = f"sqlite:///{mlflow_db_path.as_posix()}"
     model_uri_file = model_dir / "latest_model_uri.txt"

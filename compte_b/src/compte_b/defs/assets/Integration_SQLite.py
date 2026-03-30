@@ -1,23 +1,12 @@
 from pathlib import Path
 
 import dagster as dg
+from compte_b.env_paths import resolve_compte_b_project_root
 
 
 def _repo_root() -> Path:
-    """Locate repo root by searching for compte_b/pyproject.toml."""
-
-    this_file = Path(__file__).resolve()
-    root = next(
-        (
-            parent
-            for parent in this_file.parents
-            if (parent / "compte_b" / "pyproject.toml").exists()
-        ),
-        None,
-    )
-    if root is None:
-        raise RuntimeError("Could not locate repo root (missing compte_b/pyproject.toml)")
-    return root
+    """Racine du projet `compte_b` (contient `pyproject.toml` et `data/`)."""
+    return resolve_compte_b_project_root(start=Path(__file__))
 
 
 @dg.asset(
@@ -35,7 +24,7 @@ def partage_sqlite(context: dg.AssetExecutionContext) -> dg.MaterializeResult:
 
     sqlite_path = Path(context.resources.sqlite.database)
     if not sqlite_path.is_absolute():
-        sqlite_path = (_repo_root() / "compte_b" / sqlite_path).resolve()
+        sqlite_path = (_repo_root() / sqlite_path).resolve()
 
     table_name = "partage_sqlite_table"
 

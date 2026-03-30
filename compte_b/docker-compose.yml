@@ -1,0 +1,22 @@
+services:
+  compte_b:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: compte_b:local
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    ports:
+      - "3000:3000"
+    environment:
+      COMPTE_B_DUCKDB_PATH: /app/data/compte_b.duckdb
+      COMPTE_B_SQLITE_PATH: /app/data/partage.sqlite
+      DOWNLOADS_DIR: /downloads
+      DAGSTER_WEBSERVER_HOST: 0.0.0.0
+      DAGSTER_WEBSERVER_PORT: 3000
+    volumes:
+      # Persist project data (DuckDB, SQLite, ML artifacts) on the host
+      - ./data:/app/data
+      # Read-only access to your macOS Downloads folder inside the container at /downloads
+      - ${HOME}/Downloads:/downloads:ro
