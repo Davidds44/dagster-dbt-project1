@@ -20,10 +20,10 @@ dev = [
     "dagster-webserver",
     "dagster-dg-cli",
     "jupyter>=1.1.1",
-    "nltk>=3.9.4",
     "ipykernel>=7.2.0",
     "datasette>=0.65.2",
     "docker>=7.1.0",
+    "pytest>=9.0.2",
 ]
 
 [build-system]

@@ -1,6 +1,5 @@
 # Build from repo root of the compte_b package (directory containing pyproject.toml).
 FROM python:3.12-slim-bookworm
-#FROM python:3.12-alpine
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
